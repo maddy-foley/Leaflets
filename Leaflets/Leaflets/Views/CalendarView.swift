@@ -10,15 +10,43 @@ import SwiftData
 
 
 struct CalendarView: View {
+    @Environment(\.modelContext) var modelContext
+    
     var calendar = Calendar(identifier: .gregorian)
-    @State var myDate = Date()
+    @Query var events: [Event]
+    @State var date = Date()
     @State private var dates: Set<DateComponents> = []
-
+    @State var selectedDate: DateComponents?
+    
     var body: some View {
         VStack{
-            MultiDatePicker("Dates Available", selection: $dates)
-                
-                
+          
+        Form {
+            Section("Event Calendar"){
+                MultiDatePicker("Dates Available", selection: $dates)
+            }
+            if !dates.isEmpty{
+                Button("Save"){
+                    addEvents()
+                }
+            }
+        }
+                    
+        VStack{
+            ForEach(events, id: \.self){ event in
+                Text(event.name)
+            }
+            }
+        }
+    }
+    
+    func addEvents() {
+        for d in dates{
+            if d.isValidDate{
+                let event = Event("test",eventDate: d.date!)
+                modelContext.insert(event)
+                try? modelContext.save()
+            }
         }
     }
 }
@@ -26,4 +54,5 @@ struct CalendarView: View {
 
 #Preview {
     CalendarView()
+        .modelContainer(for: Event.self, inMemory: true)
 }

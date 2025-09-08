@@ -30,7 +30,6 @@ class Event: Identifiable, Hashable {
         self.name = name
         self.eventDate = eventDate
         self.systemImage = systemImage
-
         self.notes = notes
     }
 }

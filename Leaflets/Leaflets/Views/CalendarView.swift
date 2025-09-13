@@ -1,58 +1,121 @@
-//
-//  CalendarView.swift
-//  Leaflets
-//
-//  Created by Maddy Foley on 9/8/25.
-//
 
 import SwiftUI
+import UIKit
 import SwiftData
 
-
-struct CalendarView: View {
-    @Environment(\.modelContext) var modelContext
+struct MyCalendarView: View{
+    @State private var selectedDate: DateComponents?
+    @Query
+    var events: [EventData]
+    @State var eventComponents = EventComponents()
+    @State private var isLoading = true
     
-    var calendar = Calendar(identifier: .gregorian)
-    @Query var events: [Event]
-    @State var date = Date()
-    @State private var dates: Set<DateComponents> = []
-    @State var selectedDate: DateComponents?
     
-    var body: some View {
+    var body: some View{
         VStack{
-          
-        Form {
-            Section("Event Calendar"){
-                MultiDatePicker("Dates Available", selection: $dates)
+            if !isLoading {
+                CalendarView(interval: DateInterval(start: .distantPast, end: .distantFuture), selectedDate: $selectedDate, eventComponents: $eventComponents)
+            } else {
+                Text("Loading...")
             }
-            if !dates.isEmpty{
-                Button("Save"){
-                    addEvents()
-                }
-            }
-        }
-                    
-        VStack{
-            ForEach(events, id: \.self){ event in
-                Text(event.name)
-            }
-            }
-        }
-    }
-    
-    func addEvents() {
-        for d in dates{
-            if d.isValidDate{
-                let event = Event("test",eventDate: d.date!)
-                modelContext.insert(event)
-                try? modelContext.save()
-            }
+        }.task{
+            
+            eventComponents.events = events
+            isLoading = false
+         }
+        .onChange(of: events) {
+            eventComponents.events = events
+            isLoading = false
         }
     }
 }
 
 
+
+struct CalendarView: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    let interval: DateInterval
+    
+    @Binding var selectedDate: DateComponents?
+    @Binding var eventComponents: EventComponents
+    
+    
+    func makeUIView(context: Context) -> UICalendarView {
+        
+        let calendarView = UICalendarView()
+        context.coordinator.calendarView = calendarView
+        
+        calendarView.delegate = context.coordinator
+        calendarView.fontDesign = .rounded
+        calendarView.calendar = Calendar(identifier: .gregorian)
+        calendarView.availableDateRange = interval
+        calendarView.locale = .current
+        
+        let dateSelection = UICalendarSelectionSingleDate(delegate: context.coordinator)
+        calendarView.selectionBehavior = dateSelection
+        
+        return calendarView
+    }
+    
+    
+    
+    func updateUIView(_ uiView: UICalendarView, context: Context) {
+        if $eventComponents.events.count != context.coordinator.parent.$eventComponents.events.count {
+        }
+    }
+    
+    
+    
+    class Coordinator: NSObject, UICalendarViewDelegate, UICalendarSelectionSingleDateDelegate {
+        
+        func dateSelection(_ selection: UICalendarSelectionSingleDate, didSelectDate dateComponents: DateComponents?) {
+        }
+        
+        var parent: CalendarView
+        var calendarView: UICalendarView? = nil
+        
+        
+        
+        init(_ calendarView: CalendarView) {
+            parent = calendarView
+        }
+        
+        
+        //Adds decorations to Calendar
+        func calendarView(_ calendarView: UICalendarView, decorationFor dateComponents: DateComponents) -> UICalendarView.Decoration? {
+            
+            
+            let targetDate = Calendar.current.date(from: dateComponents)
+            
+            for e in parent.eventComponents.events {
+                if Calendar.current.isDate(e.date, inSameDayAs: targetDate!) {
+                    return UICalendarView.Decoration.image(
+                        UIImage(systemName: e.systemImageName),
+                        color: .red,
+                        size: .large
+                    )
+                }
+            }
+            return nil
+        }
+        
+        func dateSelection(
+            _ selection: UICalendarSelectionSingleDate,
+            canSelectDate dateComponents: DateComponents?
+        ) -> Bool {
+            
+            return dateComponents != nil
+        }
+    }
+    
+}
+
 #Preview {
-    CalendarView()
-        .modelContainer(for: Event.self, inMemory: true)
+    
+    
+    MyCalendarView()
+        .modelContainer(for: EventData.self)
 }

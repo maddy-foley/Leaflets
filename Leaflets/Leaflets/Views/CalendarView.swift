@@ -5,6 +5,7 @@ import SwiftData
 
 struct MyCalendarView: View{
     @State private var selectedDate: DateComponents?
+    @Environment(\.modelContext) private var modelContext
     @Query
     var events: [EventData]
     @State var eventComponents = EventComponents()
@@ -14,19 +15,37 @@ struct MyCalendarView: View{
     var body: some View{
         VStack{
             if !isLoading {
+                Text("")
+                
                 CalendarView(interval: DateInterval(start: .distantPast, end: .distantFuture), selectedDate: $selectedDate, eventComponents: $eventComponents)
             } else {
                 Text("Loading...")
             }
-        }.task{
-            
-            eventComponents.events = events
-            isLoading = false
-         }
+        }
+        .task{
+            do{
+                // REMOVE TEST WHEN DONE
+                let event1 = EventData("text", date: Date(),systemImageName: "heart.fill")
+                modelContext.insert(event1)
+                
+                try? modelContext.save()
+                
+                eventComponents.events = events
+                
+                
+                // wait for async manually
+                try await Task.sleep(nanoseconds: 2)
+                
+                isLoading = false
+            } catch {
+                print("Error")
+            }
+        }
         .onChange(of: events) {
             eventComponents.events = events
             isLoading = false
         }
+        
     }
 }
 
@@ -87,8 +106,10 @@ struct CalendarView: UIViewRepresentable {
         //Adds decorations to Calendar
         func calendarView(_ calendarView: UICalendarView, decorationFor dateComponents: DateComponents) -> UICalendarView.Decoration? {
             
-            
+           
             let targetDate = Calendar.current.date(from: dateComponents)
+            
+           
             
             for e in parent.eventComponents.events {
                 if Calendar.current.isDate(e.date, inSameDayAs: targetDate!) {
@@ -102,6 +123,8 @@ struct CalendarView: UIViewRepresentable {
             return nil
         }
         
+        
+        
         func dateSelection(
             _ selection: UICalendarSelectionSingleDate,
             canSelectDate dateComponents: DateComponents?
@@ -114,8 +137,7 @@ struct CalendarView: UIViewRepresentable {
 }
 
 #Preview {
-    
-    
+   
     MyCalendarView()
         .modelContainer(for: EventData.self)
 }

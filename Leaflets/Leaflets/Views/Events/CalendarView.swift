@@ -23,6 +23,7 @@ struct MyCalendarView: View{
             }
         }
         .task{
+            
             do{
                 // REMOVE TEST WHEN DONE
                 let event1 = EventData("text", date: Date(),systemImageName: "heart.fill")

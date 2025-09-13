@@ -4,7 +4,7 @@
 //
 //  Created by Maddy Foley on 9/8/25.
 //
-import Foundation
+
 import SwiftData
 import SwiftUI
 
